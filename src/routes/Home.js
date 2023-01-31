@@ -3,15 +3,16 @@ import {
     dbService, 
     dbAddDoc, 
     dbCollection, 
-    dbGetDocs, 
-    dbGetDoc,
+    dbGetDocs,
+    dbQuery,
 } from "fbase";
 
-const Home = () => {
+const Home = ({userObj}) => {
     const [nweet, setNweet] = useState("");
     const [nweets, setNweets] = useState([]);
     const getNweets = async () => {
-        const dbNweets = await dbGetDocs(dbCollection(dbService, "nweets"));
+        const query = await dbQuery(dbCollection(dbService, "nweets"));
+        const dbNweets = await dbGetDocs(query);
         dbNweets.forEach((doc) => {
             const nweetObject = {
                 ...doc.data(),
@@ -36,8 +37,9 @@ const Home = () => {
         event.preventDefault();
         try{
             await dbAddDoc(dbCollection(dbService, "nweets"),{
-                nweet,
+                text: nweet,
                 createAt: Date.now(),
+                creatorId: userObj.uid,
             });
         } catch (error) {
             console.error("Error adding document: ", error);
@@ -60,6 +62,14 @@ const Home = () => {
                     value='Nweet'
                 />
             </form>
+            <div>
+                {nweets.map(nweet => 
+                    <div key={nweet.id}>
+                        <h4>{nweet.text}</h4>
+                        <h5>{nweet.creatorId}</h5>
+                    </div>
+                )}
+            </div>
         </>
     );
 };
