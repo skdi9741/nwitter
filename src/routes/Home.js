@@ -7,14 +7,14 @@ import {
     dbOnSnapShot,
     storageService,
 } from "fbase";
-import { ref, uploadString } from "@firebase/storage";
+import { ref, uploadString, getDownloadURL } from "@firebase/storage";
 import Nweet from "components/Nweet";
 import { v4 } from "uuid";
 
 const Home = ({ userObj }) => {
     const [nweet, setNweet] = useState("");
     const [nweets, setNweets] = useState([]);
-    const [attachment, setAttachment] = useState();
+    const [attachment, setAttachment] = useState("");
     const getNweets = async () => {
         const query = await dbQuery(
             dbCollection(dbService, "nweets"),
@@ -42,20 +42,28 @@ const Home = ({ userObj }) => {
 
     const onSubmit = async (event) => {
         event.preventDefault();
-        const fileRef = ref(storageService, `${userObj.uid}/${v4()}`);
-        await uploadString(fileRef, attachment, "data_url");
-        
-        /* try{
-            await dbAddDoc(dbCollection(dbService, "nweets"),{
-                text: nweet,
-                createAt: Date.now(),
-                creatorId: userObj.uid,
-            });
+        let attachmentUrl = "";
+        if (attachment !== "") {
+            const attachmentRef = ref(storageService, `${userObj.uid}/${v4()}`);
+            const response = await uploadString(attachmentRef, attachment, "data_url");
+            attachmentUrl = await getDownloadURL(response.ref);
+        }
+
+        const nweetObj = {
+            text: nweet,
+            createdAt: Date.now(),
+            creatorId: userObj.uid,
+            attachmentUrl,
+        };
+        try{
+            await dbAddDoc(dbCollection(dbService, "nweets"), nweetObj);
         } catch (error) {
             console.error("Error adding document: ", error);
         }
-        setNweet(""); */
+        setNweet("");
+        setAttachment("");
     };
+
     const onFileChange = (event) => {
         const { 
             target: { files },
@@ -70,7 +78,11 @@ const Home = ({ userObj }) => {
         };
         reader.readAsDataURL(theFile);
     };
-    const onClearAttachment = () => setAttachment(null);
+
+    const onClearAttachment = () => {
+        setAttachment("");
+    };
+    
     return (
         <>
             <form onSubmit={onSubmit}>
